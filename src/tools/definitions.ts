@@ -306,7 +306,7 @@ export const toolDefinitions: MCPTool[] = [
   },
   {
     name: 'web_fetch_json',
-    description: 'Fetch raw JSON data from any public HTTP/HTTPS API endpoint. Use this for real-time data like gold price, crypto price, weather, exchange rates, etc. Known free APIs: gold+metals=https://metals.live/api/latest (returns {gold,silver,platinum...} in USD/oz), crypto=https://api.coinbase.com/v2/prices/BTC-USD/spot, exchange rates=https://api.frankfurter.app/latest',
+    description: 'Fetch raw JSON data from any public HTTP/HTTPS API endpoint. Use this for real-time data. Working free APIs: GOLD price=https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD (returns array, extract [0].spreadProfilePrices[0].bid for USD/oz), BTC=https://api.coinbase.com/v2/prices/BTC-USD/spot (extract data.amount), USD to THB rate=https://api.frankfurter.app/latest?from=USD&to=THB (extract rates.THB).',
     inputSchema: {
       type: 'object',
       properties: {

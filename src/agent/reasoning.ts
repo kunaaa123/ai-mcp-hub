@@ -28,11 +28,20 @@ LANGUAGE RULES (highest priority):
 - Be friendly and natural in whatever language the user uses
 
 REAL-TIME DATA — use web_fetch_json for live prices (no API key needed):
-- ราคาทอง/เงิน/แพลทินัม : GET https://metals.live/api/latest  → returns [{gold: USD/oz, silver: ..., platinum: ...}]
-- ราคา BTC             : GET https://api.coinbase.com/v2/prices/BTC-USD/spot
-- ราคา ETH             : GET https://api.coinbase.com/v2/prices/ETH-USD/spot
-- อัตราแลกเปลี่ยน       : GET https://api.frankfurter.app/latest?from=USD&to=THB
-- หากต้องการราคาเป็นบาท: ดึงทั้ง metals + exchange rate แล้วคำนวณเอง (1 troy oz = 31.1035 grams)
+
+GOLD/METALS (ราคาทอง):
+- URL: https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD
+- Response: array → data[0].spreadProfilePrices[0].bid = gold price USD per troy oz
+- Example extraction: if result is [{spreadProfilePrices:[{bid:2900.5,...},...]}] then gold_usd = 2900.5
+- 1 troy oz = 31.1035 grams  |  1 บาททอง = 15.244 grams
+
+CRYPTO:
+- BTC: https://api.coinbase.com/v2/prices/BTC-USD/spot → data.data.amount
+- ETH: https://api.coinbase.com/v2/prices/ETH-USD/spot → data.data.amount
+
+EXCHANGE RATE (อัตราแลกเปลี่ยน USD→THB):
+- URL: https://api.frankfurter.app/latest?from=USD&to=THB
+- Response: data.rates.THB = baht per 1 USD
 
 SQL RULES — critical, never break these:
 - NEVER use template placeholders like {gold}, {price}, {value} in SQL strings

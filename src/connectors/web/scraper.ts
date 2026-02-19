@@ -141,5 +141,56 @@ export async function fetchJson(url: string, params?: Record<string, string>): P
     params,
     timeout: 10000,
   });
+
+  // ── Auto-parse known APIs so AI gets clean values ──────────
+  // Swissquote XAU/USD gold price
+  if (url.includes('swissquote.com') && url.includes('XAU')) {
+    const arr = data as Array<{ spreadProfilePrices: Array<{ bid: number; ask: number }> }>;
+    if (Array.isArray(arr) && arr[0]?.spreadProfilePrices?.[0]) {
+      const { bid, ask } = arr[0].spreadProfilePrices[0];
+      const mid = Math.round(((bid + ask) / 2) * 100) / 100;
+      return {
+        source: 'Swissquote',
+        instrument: 'XAU/USD',
+        unit: 'USD per troy oz',
+        bid,
+        ask,
+        mid,
+        price_usd_per_oz: mid,
+        price_usd_per_gram: Math.round((mid / 31.1035) * 100) / 100,
+        note: 'Use price_usd_per_oz for INSERT. 1 troy oz = 31.1035 grams.',
+      };
+    }
+  }
+
+  // Coinbase crypto price
+  if (url.includes('coinbase.com') && url.includes('/prices/')) {
+    const d = data as { data: { amount: string; currency: string; base: string } };
+    if (d?.data?.amount) {
+      return {
+        source: 'Coinbase',
+        pair: `${d.data.base}/${d.data.currency}`,
+        price: parseFloat(d.data.amount),
+        price_usd: parseFloat(d.data.amount),
+        currency: d.data.currency,
+      };
+    }
+  }
+
+  // Frankfurter exchange rates
+  if (url.includes('frankfurter.app')) {
+    const d = data as { base: string; date: string; rates: Record<string, number> };
+    if (d?.rates) {
+      return {
+        source: 'Frankfurter',
+        base: d.base,
+        date: d.date,
+        rates: d.rates,
+        // flatten top-level for easy access
+        ...d.rates,
+      };
+    }
+  }
+
   return data;
 }
