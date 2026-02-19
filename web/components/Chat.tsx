@@ -86,24 +86,6 @@ export function ChatInterface({ messages, isLoading, onSend }: ChatInterfaceProp
           <MessageBubble key={msg.id} message={msg} />
         ))}
 
-        {isLoading && (
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #0ea5e9)' }}>
-              <Bot size={16} className="text-white" />
-            </div>
-            <div className="rounded-2xl rounded-tl-none px-4 py-3 text-sm"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <div className="flex gap-1 items-center">
-                <span style={{ color: 'var(--text-muted)' }} className="text-xs">AI กำลังคิด</span>
-                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-purple-400 inline-block ml-1" />
-                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-purple-400 inline-block" />
-                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-purple-400 inline-block" />
-              </div>
-            </div>
-          </div>
-        )}
-
         <div ref={bottomRef} />
       </div>
 
@@ -177,12 +159,12 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           color: 'var(--text-primary)',
         }}
       >
-        <FormattedContent content={message.content} />
-        {(message as any).streaming && (
-          <span className="inline-block w-2 h-4 ml-0.5 rounded-sm animate-pulse bg-purple-400 align-text-bottom" />
-        )}
-        {(message as any).streaming && !message.content && (
-          <span className="text-purple-400 animate-pulse text-xs">กำลังคิด...</span>
+        {(message as any).streaming && !message.content
+          ? <span className="text-purple-400 text-sm">กำลังคิด<span className="animate-pulse">...</span></span>
+          : <FormattedContent content={message.content} />
+        }
+        {(message as any).streaming && message.content && (
+          <span className="inline-block w-1.5 h-4 ml-0.5 rounded-sm animate-pulse bg-purple-400 align-text-bottom" />
         )}
         {message.timeline && message.timeline.toolCalls.length > 0 && (
           <div className="mt-2 pt-2 border-t text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>

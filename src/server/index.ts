@@ -1,6 +1,7 @@
 import { createApp } from './app';
 import config from '../config';
 import { ensureModel } from '../agent/ollama';
+import { mcpManager } from '../mcp/manager';
 
 async function main() {
   console.log('');
@@ -18,6 +19,9 @@ async function main() {
     console.warn(`[Ollama] ⚠️  ${err.message}`);
     console.warn('[Ollama] Make sure Ollama is running: ollama serve');
   }
+
+  // Connect external MCP servers
+  await mcpManager.connectAll();
 
   // Start server
   const { httpServer } = createApp();

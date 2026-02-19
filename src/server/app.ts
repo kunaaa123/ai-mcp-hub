@@ -12,6 +12,7 @@ import { getOrCreateSession, createSession, clearSession, listSessions, getHisto
 import { getRoleFromHeader, getPermissionSummary, isValidRole } from '../permissions/rbac';
 import { toolDefinitions } from '../tools/definitions';
 import { checkOllamaHealth } from '../agent/ollama';
+import { mcpManager } from '../mcp/manager';
 import { ApiResponse, Role, ExecutionTimeline } from '../types';
 
 // ============================================================
@@ -205,6 +206,61 @@ export function createApp() {
   app.delete('/api/metrics', (_req, res) => {
     metricsStore.reset();
     ok(res, { reset: true });
+  });
+
+  // ─── MCP Server Management API ──────────────────────────────
+  // GET /api/mcp/servers — list all servers + status
+  app.get('/api/mcp/servers', (_req, res) => {
+    ok(res, mcpManager.getStatus());
+  });
+
+  // GET /api/mcp/tools — list all tools from connected servers
+  app.get('/api/mcp/tools', (_req, res) => {
+    ok(res, mcpManager.getAllTools());
+  });
+
+  // POST /api/mcp/servers — add a new MCP server
+  app.post('/api/mcp/servers', async (req, res) => {
+    const { name, description, command, args = [], env = {}, enabled = true } = req.body;
+    if (!name) return fail(res, 'name is required');
+    if (!command) return fail(res, 'command is required');
+    try {
+      const server = await mcpManager.addServer({ name, description, command, args, env, enabled });
+      ok(res, server);
+    } catch (e: any) {
+      fail(res, e.message, 500);
+    }
+  });
+
+  // PATCH /api/mcp/servers/:id — update (toggle enabled, change args, etc.)
+  app.patch('/api/mcp/servers/:id', async (req, res) => {
+    try {
+      const updated = await mcpManager.updateServer(req.params['id']!, req.body);
+      ok(res, updated);
+    } catch (e: any) {
+      fail(res, e.message, 400);
+    }
+  });
+
+  // POST /api/mcp/servers/:id/reconnect — reconnect a specific server
+  app.post('/api/mcp/servers/:id/reconnect', async (req, res) => {
+    try {
+      await mcpManager.reconnectServer(req.params['id']!);
+      const status = mcpManager.getStatus().find((s) => s.id === req.params['id']);
+      ok(res, status);
+    } catch (e: any) {
+      fail(res, e.message, 400);
+    }
+  });
+
+  // DELETE /api/mcp/servers/:id — remove a server
+  app.delete('/api/mcp/servers/:id', async (req, res) => {
+    try {
+      await mcpManager.removeServer(req.params['id']!);
+      ok(res, { deleted: true });
+    } catch (e: any) {
+      fail(res, e.message, 400);
+    }
   });
 
   // ─── Permissions API ────────────────────────────────────────

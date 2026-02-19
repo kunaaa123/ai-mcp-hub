@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ollamaChat, ollamaChatStream, OllamaChatMessage } from './ollama';
 import { ToolRegistry } from '../tools/registry';
 import { toolDefinitions, toOllamaTools } from '../tools/definitions';
+import { mcpManager } from '../mcp/manager';
 import { ExecutionTimeline, ToolCall, ToolName, Role, AgentMessage } from '../types';
 import type { SessionMemory } from './memory';
 import config from '../config';
@@ -71,6 +72,27 @@ export class ReasoningAgent {
     this.registry = new ToolRegistry(memory.role);
   }
 
+  private async runMcpTool(fullName: string, args: Record<string, unknown>): Promise<ToolCall> {
+    const call: ToolCall = {
+      id: uuidv4(),
+      toolName: fullName,
+      args,
+      status: 'running',
+      startedAt: new Date(),
+    };
+    const start = Date.now();
+    try {
+      call.result = await mcpManager.executeTool(fullName, args);
+      call.status = 'success';
+    } catch (e: any) {
+      call.status = 'error';
+      call.error = e.message;
+    }
+    call.finishedAt = new Date();
+    call.durationMs = Date.now() - start;
+    return call;
+  }
+
   async run(options: AgentRunOptions): Promise<ExecutionTimeline> {
     const {
       userPrompt,
@@ -98,7 +120,10 @@ export class ReasoningAgent {
       return true;
     });
 
-    const ollamaTools = toOllamaTools(availableTools);
+    const ollamaTools = [
+      ...toOllamaTools(availableTools),
+      ...mcpManager.toOllamaTools(),
+    ];
 
     // Build conversation from session memory (keep last 8 msgs to limit token usage)
     const recentHistory = this.memory.messages.slice(-8);
@@ -163,7 +188,10 @@ export class ReasoningAgent {
 
         console.log(`[Agent] Calling tool: ${toolName}`, toolArgs);
 
-        const toolCall = await this.registry.executeTool(toolName, toolArgs);
+        // Route to external MCP server if prefixed with mcp__
+        const toolCall = toolName.startsWith('mcp__')
+          ? await this.runMcpTool(toolName, toolArgs)
+          : await this.registry.executeTool(toolName, toolArgs);
         timeline.toolCalls.push(toolCall);
 
         // Format tool result for conversation

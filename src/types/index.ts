@@ -33,7 +33,7 @@ export type ToolStatus = 'pending' | 'running' | 'success' | 'error' | 'skipped'
 // ─── Tool Call ───────────────────────────────────────────────
 export interface ToolCall {
   id: string;
-  toolName: ToolName;
+  toolName: string; // ToolName | 'mcp__<serverId>__<toolName>' for external MCP tools
   args: Record<string, unknown>;
   result?: unknown;
   error?: string;
