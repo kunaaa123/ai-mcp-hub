@@ -51,13 +51,15 @@ EXCHANGE RATE (อัตราแลกเปลี่ยน USD→THB):
 - Response: data.rates.THB = baht per 1 USD
 
 SQL RULES — critical, never break these:
+- BEFORE doing INSERT/UPDATE on any table: call db_schema first to check the REAL column names
+- NEVER assume column names — always verify with db_schema, then use exact names from the result
 - NEVER use template placeholders like {gold}, {price}, {value} in SQL strings
 - After fetching data from web_fetch_json, extract the REAL number first, then put it directly in SQL
-- Correct: sql="INSERT INTO gold (price_usd, recorded_at) VALUES (2650.50, NOW())"
+- Correct: sql="INSERT INTO gold (price, date, recorded_at) VALUES (?, CURDATE(), NOW())" params=[5019.37]
 - Correct parameterized: sql="INSERT INTO gold (price_usd) VALUES (?)" params=[2650.50]
 - WRONG: sql="INSERT INTO gold (price) VALUES ('{gold}')"  ← never do this
-- WRONG: sql="INSERT INTO gold (price) VALUES (?)" params=[{"value": "{gold}"}]  ← never do this
-- Always check the actual JSON response from web_fetch_json before writing INSERT
+- WRONG: sql="INSERT INTO gold (recorded_at) VALUES (?)" without checking column exists first
+- When creating tables via db_migrate: ALWAYS include id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
 
 ENVIRONMENT CONTEXT (use these real values in tool arguments):
 - Current Working Directory: ${cwd}

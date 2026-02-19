@@ -36,7 +36,7 @@ export const toolDefinitions: MCPTool[] = [
   },
   {
     name: 'db_migrate',
-    description: 'Execute a SQL migration script. Supports multiple statements separated by semicolons. Runs in a transaction.',
+    description: 'Execute a SQL migration script (CREATE TABLE, ALTER TABLE, etc). IMPORTANT: When creating tables, ALWAYS include id INT NOT NULL AUTO_INCREMENT PRIMARY KEY. Example: CREATE TABLE gold (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, price DECIMAL(10,2), date DATE, recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP);',
     inputSchema: {
       type: 'object',
       properties: {
