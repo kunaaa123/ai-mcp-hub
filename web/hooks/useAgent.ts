@@ -37,6 +37,8 @@ export interface ExecutionTimeline {
   finishedAt?: string;
 }
 
+export type AgentMode = 'single' | 'multi';
+
 export function useAgent() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -44,6 +46,7 @@ export function useAgent() {
   const [allTimelines, setAllTimelines] = useState<ExecutionTimeline[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [role, setRole] = useState<Role>('operator');
+  const [agentMode, setAgentMode] = useState<AgentMode>('single');
   const socketRef = useRef<Socket | null>(null);
 
   const connectSocket = useCallback((sid: string) => {
@@ -92,7 +95,7 @@ export function useAgent() {
       const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content, sessionId, userId: 'user', role }),
+        body: JSON.stringify({ message: content, sessionId, userId: 'user', role, mode: agentMode }),
       });
 
       const data = await res.json();
@@ -137,7 +140,7 @@ export function useAgent() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, role, isLoading, connectSocket]);
+  }, [sessionId, role, agentMode, isLoading, connectSocket]);
 
   const clearSession = useCallback(() => {
     if (sessionId) {
@@ -159,6 +162,8 @@ export function useAgent() {
     isLoading,
     role,
     setRole,
+    agentMode,
+    setAgentMode,
     sendMessage,
     clearSession,
   };

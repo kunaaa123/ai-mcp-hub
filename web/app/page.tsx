@@ -16,6 +16,8 @@ export default function Home() {
     isLoading,
     role,
     setRole,
+    agentMode,
+    setAgentMode,
     sendMessage,
     clearSession,
   } = useAgent();
@@ -49,8 +51,8 @@ export default function Home() {
           className="flex flex-col w-[480px] border-l overflow-hidden"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-secondary)' }}
         >
-          {/* Panel Tabs */}
-          <div className="flex border-b" style={{ borderColor: 'var(--border)' }}>
+          {/* Panel Tabs + Mode Toggle */}
+          <div className="flex border-b items-center" style={{ borderColor: 'var(--border)' }}>
             <button
               onClick={() => setActivePanel('timeline')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
@@ -70,6 +72,19 @@ export default function Home() {
               }`}
             >
               Available Tools
+            </button>
+            {/* Multi-Agent Toggle */}
+            <button
+              onClick={() => setAgentMode(agentMode === 'single' ? 'multi' : 'single')}
+              className="px-3 py-1 mx-2 rounded-full text-xs font-medium transition-colors"
+              style={{
+                background: agentMode === 'multi' ? 'rgba(124,58,237,0.2)' : 'var(--bg-primary)',
+                border: `1px solid ${agentMode === 'multi' ? '#7c3aed' : 'var(--border)'}`,
+                color: agentMode === 'multi' ? '#a78bfa' : 'var(--text-muted)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {agentMode === 'multi' ? '🤖 Multi' : '⚡ Single'}
             </button>
           </div>
 

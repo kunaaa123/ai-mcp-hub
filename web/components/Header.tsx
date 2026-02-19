@@ -1,6 +1,7 @@
 'use client';
 
-import { Brain, RefreshCw, Shield, Wifi } from 'lucide-react';
+import Link from 'next/link';
+import { Brain, BarChart2, RefreshCw, Shield, Wifi } from 'lucide-react';
 import type { Role } from '../hooks/useAgent';
 
 interface HeaderProps {
@@ -83,6 +84,16 @@ export function Header({ sessionId, role, onRoleChange, onClearSession, isLoadin
             ))}
           </select>
         </div>
+
+        {/* Metrics Link */}
+        <Link
+          href="/metrics"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:border-gray-500"
+          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', textDecoration: 'none' }}
+        >
+          <BarChart2 size={12} />
+          <span>Metrics</span>
+        </Link>
 
         {/* Clear Session */}
         <button

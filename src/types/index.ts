@@ -149,3 +149,64 @@ export interface ApiResponse<T = unknown> {
   error?: string;
   timestamp: Date;
 }
+
+// ─── Multi-Agent Types ───────────────────────────────────────
+export type AgentType = 'planner' | 'executor' | 'reviewer';
+
+export interface ExecutionStep {
+  stepNumber: number;
+  description: string;
+  toolHint?: ToolName;
+  status: 'pending' | 'running' | 'done' | 'skipped';
+}
+
+export interface AgentPlan {
+  goal: string;
+  steps: ExecutionStep[];
+  estimatedTools: ToolName[];
+  complexity: 'simple' | 'medium' | 'complex';
+}
+
+export interface ReviewResult {
+  passed: boolean;
+  score: number; // 0-10
+  feedback: string;
+  issues: string[];
+  suggestions: string[];
+}
+
+export interface MultiAgentTimeline extends ExecutionTimeline {
+  plan?: AgentPlan;
+  review?: ReviewResult;
+  agentLogs: Array<{ agentType: AgentType; message: string; timestamp: string }>;
+}
+
+// ─── Metrics Types ───────────────────────────────────────────
+export interface ToolMetric {
+  toolName: string;
+  callCount: number;
+  successCount: number;
+  errorCount: number;
+  avgDurationMs: number;
+}
+
+export interface SessionMetric {
+  sessionId: string;
+  role: string;
+  requestCount: number;
+  toolCallCount: number;
+  successCount: number;
+  errorCount: number;
+  avgDurationMs: number;
+  lastActiveAt: string;
+}
+
+export interface SystemMetrics {
+  totalRequests: number;
+  totalToolCalls: number;
+  totalTokensUsed: number;
+  avgResponseTimeMs: number;
+  successRate: number;
+  toolMetrics: ToolMetric[];
+  recentSessions: SessionMetric[];
+}

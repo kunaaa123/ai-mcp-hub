@@ -185,3 +185,8 @@ export class ToolRegistry {
     }
   }
 }
+
+// ─── Utility ────────────────────────────────────────────────
+export function getAllToolNames(): ToolName[] {
+  return toolDefinitions.map((t) => t.name as ToolName);
+}

@@ -2,9 +2,12 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
+import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import config from '../config';
 import { ReasoningAgent } from '../agent/reasoning';
+import { OrchestratorAgent } from '../agent/orchestrator';
+import { metricsStore } from '../metrics/store';
 import { getOrCreateSession, createSession, clearSession, listSessions, getHistorySummary } from '../agent/memory';
 import { getRoleFromHeader, getPermissionSummary, isValidRole } from '../permissions/rbac';
 import { toolDefinitions } from '../tools/definitions';
@@ -93,6 +96,7 @@ export function createApp() {
       sessionId,
       userId = 'anonymous',
       role = 'operator',
+      mode = 'single', // 'single' | 'multi'
     } = req.body;
 
     if (!message) return fail(res, 'message is required');
@@ -100,7 +104,6 @@ export function createApp() {
 
     // Get or create session
     const session = getOrCreateSession(sessionId, userId, role as Role);
-    const agent = new ReasoningAgent(session);
 
     // Emit real-time events via WebSocket
     const emitUpdate = (event: string, data: unknown) => {
@@ -108,35 +111,97 @@ export function createApp() {
     };
 
     try {
-      emitUpdate('agent:start', { sessionId: session.sessionId, message });
+      emitUpdate('agent:start', { sessionId: session.sessionId, message, mode });
 
-      const timeline = await agent.run({
-        userPrompt: message,
-        sessionId: session.sessionId,
-        userId,
-        role: role as Role,
-      });
+      if (mode === 'multi') {
+        // ── Multi-Agent Mode ──────────────────────────────────
+        const emitter = new EventEmitter();
 
-      // Emit each tool call for real-time timeline
-      for (const call of timeline.toolCalls) {
-        emitUpdate('tool:executed', call);
+        // Proxy emitter events to socket
+        const proxyEvents = [
+          'agent:planning', 'agent:plan_ready',
+          'agent:executing', 'agent:reviewing',
+          'agent:review_done', 'tool:executed',
+        ];
+        for (const event of proxyEvents) {
+          emitter.on(event, (data) => emitUpdate(event, data));
+        }
+
+        const orchestrator = new OrchestratorAgent();
+        const result = await orchestrator.run({
+          userPrompt: message,
+          sessionId: session.sessionId,
+          role,
+          emitter,
+        });
+
+        // Record metrics
+        metricsStore.recordRequest(result.timeline, session.sessionId, role);
+
+        emitUpdate('agent:done', {
+          sessionId: session.sessionId,
+          response: result.timeline.finalResponse,
+          totalDurationMs: result.timeline.totalDurationMs,
+          mode: 'multi',
+          plan: result.plan,
+          review: result.review,
+        });
+
+        ok(res, {
+          sessionId: session.sessionId,
+          response: result.timeline.finalResponse,
+          timeline: result.timeline,
+          plan: result.plan,
+          review: result.review,
+          mode: 'multi',
+        });
+      } else {
+        // ── Single Agent Mode ─────────────────────────────────
+        const agent = new ReasoningAgent(session);
+
+        const timeline: ExecutionTimeline = await agent.run({
+          userPrompt: message,
+          sessionId: session.sessionId,
+          userId,
+          role: role as Role,
+        });
+
+        // Record metrics
+        metricsStore.recordRequest(timeline, session.sessionId, role);
+
+        // Emit each tool call for real-time timeline
+        for (const call of timeline.toolCalls) {
+          emitUpdate('tool:executed', call);
+        }
+
+        emitUpdate('agent:done', {
+          sessionId: session.sessionId,
+          response: timeline.finalResponse,
+          totalDurationMs: timeline.totalDurationMs,
+          mode: 'single',
+        });
+
+        ok(res, {
+          sessionId: session.sessionId,
+          response: timeline.finalResponse,
+          timeline,
+          mode: 'single',
+        });
       }
-
-      emitUpdate('agent:done', {
-        sessionId: session.sessionId,
-        response: timeline.finalResponse,
-        totalDurationMs: timeline.totalDurationMs,
-      });
-
-      ok(res, {
-        sessionId: session.sessionId,
-        response: timeline.finalResponse,
-        timeline,
-      });
     } catch (error: any) {
       emitUpdate('agent:error', { error: error.message });
       fail(res, error.message, 500);
     }
+  });
+
+  // ─── Metrics API ────────────────────────────────────────────
+  app.get('/api/metrics', (_req, res) => {
+    ok(res, metricsStore.getMetrics());
+  });
+
+  app.delete('/api/metrics', (_req, res) => {
+    metricsStore.reset();
+    ok(res, { reset: true });
   });
 
   // ─── Permissions API ────────────────────────────────────────
