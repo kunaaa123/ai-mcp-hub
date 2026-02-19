@@ -23,7 +23,8 @@ export type ToolName =
   | 'redis_queue'
   | 'redis_pubsub'
   | 'web_search'
-  | 'web_scrape';
+  | 'web_scrape'
+  | 'web_fetch_json';
 
 export type Role = 'admin' | 'operator' | 'readonly' | 'dev';
 

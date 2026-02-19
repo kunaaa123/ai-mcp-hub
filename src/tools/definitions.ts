@@ -305,13 +305,13 @@ export const toolDefinitions: MCPTool[] = [
     safeForProduction: true,
   },
   {
-    name: 'web_scrape',
-    description: 'Fetch and extract clean text content from any URL. Removes scripts/styles and returns readable text, page title, word count, and links. Use this to read articles, documentation, API responses, or any webpage.',
+    name: 'web_fetch_json',
+    description: 'Fetch raw JSON data from any public HTTP/HTTPS API endpoint. Use this for real-time data like gold price, crypto price, weather, exchange rates, etc. Known free APIs: gold+metals=https://metals.live/api/latest (returns {gold,silver,platinum...} in USD/oz), crypto=https://api.coinbase.com/v2/prices/BTC-USD/spot, exchange rates=https://api.frankfurter.app/latest',
     inputSchema: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'Full URL to fetch (must start with http:// or https://)' },
-        selector: { type: 'string', description: 'Optional CSS selector to extract specific content (e.g. "article", ".main-content")' },
+        url: { type: 'string', description: 'Full API URL to call (must start with http:// or https://)' },
+        params: { type: 'object', description: 'Optional query parameters as key-value object' },
       },
       required: ['url'],
     },

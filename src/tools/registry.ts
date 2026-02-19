@@ -6,7 +6,7 @@ import { callApi } from '../connectors/api/rest';
 import { readFile, writeFile, listDir, searchFiles, scaffoldProject } from '../connectors/filesystem/fs';
 import { cloneRepo, commitChanges, createBranch, getDiff, getDiffContent, analyzeBreakingChanges, listBranches, pushBranch, getLog, getStatus } from '../connectors/git/git';
 import { redisGet, redisSet, queuePush, queuePop, queueLength, queuePeek, getQueueStatus, publishMessage } from '../connectors/redis/redis';
-import { webSearch, webScrape } from '../connectors/web/scraper';
+import { webSearch, webScrape, fetchJson } from '../connectors/web/scraper';
 
 // ============================================================
 // Tool Registry — executes MCP tools
@@ -195,6 +195,14 @@ export class ToolRegistry {
           args['selector'] as string | undefined
         );
         return result;
+      }
+
+      case 'web_fetch_json': {
+        const data = await fetchJson(
+          args['url'] as string,
+          args['params'] as Record<string, string> | undefined
+        );
+        return data;
       }
 
       default:

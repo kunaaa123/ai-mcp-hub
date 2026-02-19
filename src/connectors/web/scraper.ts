@@ -31,31 +31,54 @@ export async function webSearch(
   query: string,
   maxResults = 5
 ): Promise<SearchResult[]> {
-  const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+  const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&kl=th-th`;
 
   const { data } = await axios.get<string>(searchUrl, {
     headers: { ...HEADERS, Accept: 'text/html' },
-    timeout: 10000,
+    timeout: 15000,
   });
 
   const $ = cheerio.load(data);
   const results: SearchResult[] = [];
 
-  $('.result__body').each((_, el) => {
+  // DuckDuckGo HTML selectors (try multiple patterns)
+  const containers = $('.result, .web-result, [data-testid="result"]');
+
+  containers.each((_, el) => {
     if (results.length >= maxResults) return false;
 
-    const title = $(el).find('.result__title').text().trim();
-    const rawUrl = $(el).find('.result__url').text().trim();
-    const snippet = $(el).find('.result__snippet').text().trim();
+    const title =
+      $(el).find('a.result__a, h2 a, .result__title a').first().text().trim() ||
+      $(el).find('.result__title').text().trim();
 
-    if (title && snippet) {
+    const rawUrl =
+      $(el).find('a.result__a, h2 a').first().attr('href') ||
+      $(el).find('.result__url').text().trim() ||
+      '';
+
+    const snippet =
+      $(el).find('.result__snippet, .result-snippet, [data-testid="result-snippet"]').text().trim();
+
+    if (title) {
       results.push({
         title,
-        url: rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`,
-        snippet,
+        url: rawUrl.startsWith('http') ? rawUrl : rawUrl ? `https://${rawUrl}` : '',
+        snippet: snippet || title,
       });
     }
   });
+
+  // Fallback: try any <a> with substantial text if nothing found
+  if (results.length === 0) {
+    $('a[href^="http"]').each((_, el) => {
+      if (results.length >= maxResults) return false;
+      const text = $(el).text().trim();
+      const href = $(el).attr('href') ?? '';
+      if (text.length > 20 && !href.includes('duckduckgo.com')) {
+        results.push({ title: text.slice(0, 100), url: href, snippet: text.slice(0, 200) });
+      }
+    });
+  }
 
   return results;
 }
@@ -112,9 +135,10 @@ export async function webScrape(
 }
 
 // ─── Fetch JSON from URL ─────────────────────────────────────
-export async function fetchJson(url: string): Promise<unknown> {
+export async function fetchJson(url: string, params?: Record<string, string>): Promise<unknown> {
   const { data } = await axios.get(url, {
     headers: HEADERS,
+    params,
     timeout: 10000,
   });
   return data;
