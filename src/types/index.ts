@@ -16,6 +16,8 @@ export type ToolName =
   | 'git_diff'
   | 'git_branch'
   | 'git_pr'
+  | 'git_log'
+  | 'git_status'
   | 'redis_get'
   | 'redis_set'
   | 'redis_queue'

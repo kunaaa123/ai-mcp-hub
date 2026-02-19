@@ -203,6 +203,33 @@ export const toolDefinitions: MCPTool[] = [
     permissionRequired: ['admin', 'dev'],
     safeForProduction: false,
   },
+  {
+    name: 'git_log',
+    description: 'Get git commit history. Shows hash, message, author, and date for recent commits.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repoPath: { type: 'string', description: 'Path to the git repository' },
+        count: { type: 'string', description: 'Number of commits to show (default: 10)' },
+      },
+      required: ['repoPath'],
+    },
+    permissionRequired: ['admin', 'operator', 'dev', 'readonly'],
+    safeForProduction: true,
+  },
+  {
+    name: 'git_status',
+    description: 'Get the current git working tree status: staged, unstaged, and untracked files.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repoPath: { type: 'string', description: 'Path to the git repository' },
+      },
+      required: ['repoPath'],
+    },
+    permissionRequired: ['admin', 'operator', 'dev', 'readonly'],
+    safeForProduction: true,
+  },
 
   // ─── Redis Tools ──────────────────────────────────────────
   {

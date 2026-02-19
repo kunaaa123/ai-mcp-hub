@@ -4,7 +4,7 @@ import { toolDefinitions } from './definitions';
 import { runQuery, getSchema, executeMigration } from '../connectors/database/mysql';
 import { callApi } from '../connectors/api/rest';
 import { readFile, writeFile, listDir, searchFiles, scaffoldProject } from '../connectors/filesystem/fs';
-import { cloneRepo, commitChanges, createBranch, getDiff, getDiffContent, analyzeBreakingChanges, listBranches, pushBranch } from '../connectors/git/git';
+import { cloneRepo, commitChanges, createBranch, getDiff, getDiffContent, analyzeBreakingChanges, listBranches, pushBranch, getLog, getStatus } from '../connectors/git/git';
 import { redisGet, redisSet, queuePush, queuePop, queueLength, queuePeek, getQueueStatus, publishMessage } from '../connectors/redis/redis';
 
 // ============================================================
@@ -146,6 +146,13 @@ export class ToolRegistry {
           (args['remote'] as string) || 'origin',
           args['branch'] as string | undefined
         );
+      }
+      case 'git_log': {
+        const count = args['count'] ? parseInt(args['count'] as string) : 10;
+        return getLog(args['repoPath'] as string, count);
+      }
+      case 'git_status': {
+        return getStatus(args['repoPath'] as string);
       }
 
       // ─── Redis ───────────────────────────────────────────

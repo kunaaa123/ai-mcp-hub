@@ -147,3 +147,22 @@ export async function pushBranch(
   await git.push(remote, branch);
   return { success: true };
 }
+
+// ─── Status ──────────────────────────────────────────────────
+export async function getStatus(repoPath: string): Promise<{
+  branch: string;
+  staged: string[];
+  modified: string[];
+  untracked: string[];
+  isClean: boolean;
+}> {
+  const git = getGit(repoPath);
+  const status = await git.status();
+  return {
+    branch: status.current ?? 'unknown',
+    staged: status.staged,
+    modified: status.modified,
+    untracked: status.not_added,
+    isClean: status.isClean(),
+  };
+}
