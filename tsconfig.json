@@ -14,12 +14,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "baseUrl": ".",
-    "paths": {
-      "@modelcontextprotocol/sdk/client": ["node_modules/@modelcontextprotocol/sdk/dist/cjs/client/index"],
-      "@modelcontextprotocol/sdk/client/stdio": ["node_modules/@modelcontextprotocol/sdk/dist/cjs/client/stdio"]
-    }
+    "emitDecoratorMetadata": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "web"]
