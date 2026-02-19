@@ -34,6 +34,15 @@ REAL-TIME DATA — use web_fetch_json for live prices (no API key needed):
 - อัตราแลกเปลี่ยน       : GET https://api.frankfurter.app/latest?from=USD&to=THB
 - หากต้องการราคาเป็นบาท: ดึงทั้ง metals + exchange rate แล้วคำนวณเอง (1 troy oz = 31.1035 grams)
 
+SQL RULES — critical, never break these:
+- NEVER use template placeholders like {gold}, {price}, {value} in SQL strings
+- After fetching data from web_fetch_json, extract the REAL number first, then put it directly in SQL
+- Correct: sql="INSERT INTO gold (price_usd, recorded_at) VALUES (2650.50, NOW())"
+- Correct parameterized: sql="INSERT INTO gold (price_usd) VALUES (?)" params=[2650.50]
+- WRONG: sql="INSERT INTO gold (price) VALUES ('{gold}')"  ← never do this
+- WRONG: sql="INSERT INTO gold (price) VALUES (?)" params=[{"value": "{gold}"}]  ← never do this
+- Always check the actual JSON response from web_fetch_json before writing INSERT
+
 ENVIRONMENT CONTEXT (use these real values in tool arguments):
 - Current Working Directory: ${cwd}
 - File System Allowed Path: ${fsAllowed}

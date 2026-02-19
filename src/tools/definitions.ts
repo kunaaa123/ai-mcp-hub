@@ -9,12 +9,12 @@ export const toolDefinitions: MCPTool[] = [
   {
     name: 'db_query',
     description:
-      'Execute a SQL query on the MySQL database. Returns rows and field names. Use for SELECT, INSERT, UPDATE, DELETE.',
+      'Execute a SQL query on the MySQL database. CRITICAL: NEVER use template placeholders like {gold} or {price} in SQL. After fetching data from web_fetch_json, extract the REAL number and put it directly in SQL. Example for inserting gold price: sql="INSERT INTO gold (price_usd, recorded_at) VALUES (2650.50, NOW())" — put the actual fetched number, not a variable name.',
     inputSchema: {
       type: 'object',
       properties: {
-        sql: { type: 'string', description: 'SQL query to execute' },
-        params: { type: 'string', description: 'JSON array of query parameters (for prepared statements), e.g. ["value1", 2]' },
+        sql: { type: 'string', description: 'SQL query. Use real values like 2650.50 directly, or use ? placeholders with params array. NEVER use {variable} syntax.' },
+        params: { type: 'string', description: 'JSON array of parameters for ? placeholders: e.g. [2650.50] or ["text", 42]. Each element maps to one ? in order.' },
       },
       required: ['sql'],
     },

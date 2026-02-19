@@ -63,7 +63,34 @@ export class ToolRegistry {
       // ─── Database ────────────────────────────────────────
       case 'db_query': {
         const sql = args['sql'] as string;
-        const params = args['params'] ? JSON.parse(args['params'] as string) : [];
+
+        // Detect bad SQL: template placeholders like {gold} or {value}
+        if (/\{[a-zA-Z_]+\}/.test(sql)) {
+          throw new Error(
+            'SQL contains template placeholder like {gold} or {value}. ' +
+            'You must put the REAL numeric/string value directly in the SQL or use ? with params array. ' +
+            'Example correct SQL: INSERT INTO gold (price) VALUES (2650.50) ' +
+            'or parameterized: INSERT INTO gold (price) VALUES (?) with params: [2650.50]'
+          );
+        }
+
+        // Normalize params — accept: string JSON, array, or array of {value:x} objects
+        let rawParams = args['params'];
+        let params: unknown[] = [];
+        if (rawParams) {
+          if (typeof rawParams === 'string') {
+            rawParams = JSON.parse(rawParams);
+          }
+          if (Array.isArray(rawParams)) {
+            // Unwrap {value: x} objects if AI mistakenly wraps them
+            params = rawParams.map((p: unknown) =>
+              p !== null && typeof p === 'object' && 'value' in (p as object)
+                ? (p as { value: unknown }).value
+                : p
+            );
+          }
+        }
+
         return runQuery(sql, params);
       }
       case 'db_schema': {
