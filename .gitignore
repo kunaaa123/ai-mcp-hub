@@ -10,6 +10,9 @@ web/out/
 # Environment (contains secrets)
 .env
 
+# MCP server config (may contain API keys/tokens)
+mcp-servers.json
+
 # TypeScript cache
 *.tsbuildinfo
 tsconfig.tsbuildinfo

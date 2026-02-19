@@ -1,0 +1,30 @@
+[
+  {
+    "id": "example-filesystem",
+    "name": "Filesystem Server",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"],
+    "env": {},
+    "enabled": false
+  },
+  {
+    "id": "example-github",
+    "name": "GitHub Server",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-github"],
+    "env": {
+      "GITHUB_PERSONAL_ACCESS_TOKEN": "your_token_here"
+    },
+    "enabled": false
+  },
+  {
+    "id": "example-brave-search",
+    "name": "Brave Search Server",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+    "env": {
+      "BRAVE_API_KEY": "your_api_key_here"
+    },
+    "enabled": false
+  }
+]
