@@ -6,6 +6,7 @@ import { callApi } from '../connectors/api/rest';
 import { readFile, writeFile, listDir, searchFiles, scaffoldProject } from '../connectors/filesystem/fs';
 import { cloneRepo, commitChanges, createBranch, getDiff, getDiffContent, analyzeBreakingChanges, listBranches, pushBranch, getLog, getStatus } from '../connectors/git/git';
 import { redisGet, redisSet, queuePush, queuePop, queueLength, queuePeek, getQueueStatus, publishMessage } from '../connectors/redis/redis';
+import { webSearch, webScrape } from '../connectors/web/scraper';
 
 // ============================================================
 // Tool Registry — executes MCP tools
@@ -178,6 +179,22 @@ export class ToolRegistry {
       case 'redis_pubsub': {
         const count = await publishMessage(args['channel'] as string, JSON.parse(args['message'] as string));
         return { channel: args['channel'], receiverCount: count };
+      }
+
+      case 'web_search': {
+        const results = await webSearch(
+          args['query'] as string,
+          Math.min(Number(args['maxResults'] ?? 5), 10)
+        );
+        return { query: args['query'], results, total: results.length };
+      }
+
+      case 'web_scrape': {
+        const result = await webScrape(
+          args['url'] as string,
+          args['selector'] as string | undefined
+        );
+        return result;
       }
 
       default:

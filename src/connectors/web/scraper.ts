@@ -1,0 +1,121 @@
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+
+// ============================================================
+// Web Connector — Search + Scrape
+// ============================================================
+
+const HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+    '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept-Language': 'en-US,en;q=0.9,th;q=0.8',
+};
+
+export interface SearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+export interface ScrapeResult {
+  url: string;
+  title: string;
+  text: string;
+  wordCount: number;
+  links: Array<{ text: string; href: string }>;
+}
+
+// ─── Web Search (DuckDuckGo — no API key needed) ─────────────
+export async function webSearch(
+  query: string,
+  maxResults = 5
+): Promise<SearchResult[]> {
+  const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+
+  const { data } = await axios.get<string>(searchUrl, {
+    headers: { ...HEADERS, Accept: 'text/html' },
+    timeout: 10000,
+  });
+
+  const $ = cheerio.load(data);
+  const results: SearchResult[] = [];
+
+  $('.result__body').each((_, el) => {
+    if (results.length >= maxResults) return false;
+
+    const title = $(el).find('.result__title').text().trim();
+    const rawUrl = $(el).find('.result__url').text().trim();
+    const snippet = $(el).find('.result__snippet').text().trim();
+
+    if (title && snippet) {
+      results.push({
+        title,
+        url: rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`,
+        snippet,
+      });
+    }
+  });
+
+  return results;
+}
+
+// ─── Web Scrape (fetch URL → clean text) ─────────────────────
+export async function webScrape(
+  url: string,
+  selector?: string
+): Promise<ScrapeResult> {
+  const { data } = await axios.get<string>(url, {
+    headers: { ...HEADERS, Accept: 'text/html' },
+    timeout: 15000,
+    maxContentLength: 5 * 1024 * 1024, // 5MB max
+  });
+
+  const $ = cheerio.load(data);
+
+  // Remove noise
+  $('script, style, nav, footer, header, iframe, noscript, [role="banner"]').remove();
+
+  const title = $('title').text().trim() || $('h1').first().text().trim();
+
+  // Extract text from specific selector or main content
+  const target = selector
+    ? $(selector)
+    : $('article, main, .content, .post, body');
+
+  const text = target
+    .text()
+    .replace(/\s+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 8000); // cap at 8000 chars
+
+  // Extract links
+  const links: Array<{ text: string; href: string }> = [];
+  $('a[href]')
+    .slice(0, 20)
+    .each((_, el) => {
+      const href = $(el).attr('href') ?? '';
+      const text = $(el).text().trim();
+      if (href.startsWith('http') && text) {
+        links.push({ text, href });
+      }
+    });
+
+  return {
+    url,
+    title,
+    text,
+    wordCount: text.split(/\s+/).length,
+    links,
+  };
+}
+
+// ─── Fetch JSON from URL ─────────────────────────────────────
+export async function fetchJson(url: string): Promise<unknown> {
+  const { data } = await axios.get(url, {
+    headers: HEADERS,
+    timeout: 10000,
+  });
+  return data;
+}

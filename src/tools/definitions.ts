@@ -289,6 +289,35 @@ export const toolDefinitions: MCPTool[] = [
     permissionRequired: ['admin', 'operator'],
     safeForProduction: true,
   },
+  // ─── Web Tools ──────────────────────────────────────────────
+  {
+    name: 'web_search',
+    description: 'Search the web using DuckDuckGo. Returns top results with title, URL, and snippet. Use this to find current information, news, prices, documentation, or anything on the internet.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query (e.g. "Node.js best practices 2025")' },
+        maxResults: { type: 'number', description: 'Max number of results to return (default: 5, max: 10)' },
+      },
+      required: ['query'],
+    },
+    permissionRequired: ['admin', 'operator', 'dev', 'readonly'],
+    safeForProduction: true,
+  },
+  {
+    name: 'web_scrape',
+    description: 'Fetch and extract clean text content from any URL. Removes scripts/styles and returns readable text, page title, word count, and links. Use this to read articles, documentation, API responses, or any webpage.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Full URL to fetch (must start with http:// or https://)' },
+        selector: { type: 'string', description: 'Optional CSS selector to extract specific content (e.g. "article", ".main-content")' },
+      },
+      required: ['url'],
+    },
+    permissionRequired: ['admin', 'operator', 'dev', 'readonly'],
+    safeForProduction: true,
+  },
 ];
 
 export function getToolByName(name: ToolName): MCPTool | undefined {

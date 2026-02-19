@@ -21,7 +21,9 @@ export type ToolName =
   | 'redis_get'
   | 'redis_set'
   | 'redis_queue'
-  | 'redis_pubsub';
+  | 'redis_pubsub'
+  | 'web_search'
+  | 'web_scrape';
 
 export type Role = 'admin' | 'operator' | 'readonly' | 'dev';
 
