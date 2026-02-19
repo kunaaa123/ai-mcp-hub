@@ -178,6 +178,12 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         }}
       >
         <FormattedContent content={message.content} />
+        {(message as any).streaming && (
+          <span className="inline-block w-2 h-4 ml-0.5 rounded-sm animate-pulse bg-purple-400 align-text-bottom" />
+        )}
+        {(message as any).streaming && !message.content && (
+          <span className="text-purple-400 animate-pulse text-xs">กำลังคิด...</span>
+        )}
         {message.timeline && message.timeline.toolCalls.length > 0 && (
           <div className="mt-2 pt-2 border-t text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
             ✅ {message.timeline.toolCalls.length} tool{message.timeline.toolCalls.length !== 1 ? 's' : ''} executed

@@ -37,8 +37,8 @@ export const config: AppConfig = {
     baseUrl: optional('OLLAMA_BASE_URL', 'http://localhost:11434'),
     model: optional('OLLAMA_MODEL', 'llama3.1'),
     temperature: parseFloat(optional('OLLAMA_TEMPERATURE', '0.1')),
-    contextLength: parseInt(optional('OLLAMA_CONTEXT_LENGTH', '32768')),
-    timeout: parseInt(optional('OLLAMA_TIMEOUT', '120000')),
+    contextLength: parseInt(optional('OLLAMA_CONTEXT_LENGTH', '4096')),
+    timeout: parseInt(optional('OLLAMA_TIMEOUT', '60000')),
   },
 };
 

@@ -41,6 +41,52 @@ export async function ollamaChat(options: OllamaChatOptions): Promise<OllamaResp
   return response.data as OllamaResponse;
 }
 
+// ─── Streaming chat — emits tokens via callback ───────────────
+export async function ollamaChatStream(
+  options: OllamaChatOptions,
+  onToken: (token: string) => void,
+): Promise<string> {
+  const { baseUrl, model, temperature, contextLength, timeout } = config.ollama;
+
+  const response = await axios.post(
+    `${baseUrl}/api/chat`,
+    {
+      model,
+      messages: options.messages,
+      tools: options.tools ?? [],
+      options: { temperature, num_ctx: contextLength },
+      stream: true,
+    },
+    { timeout, responseType: 'stream' }
+  );
+
+  return new Promise((resolve, reject) => {
+    let fullContent = '';
+    let buffer = '';
+
+    response.data.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString();
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? ''; // keep incomplete line
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed = JSON.parse(line);
+          const token = parsed?.message?.content ?? '';
+          if (token) {
+            fullContent += token;
+            onToken(token);
+          }
+        } catch { /* skip malformed line */ }
+      }
+    });
+
+    response.data.on('end', () => resolve(fullContent));
+    response.data.on('error', reject);
+  });
+}
+
 // ─── Check if model is available ─────────────────────────────
 export async function checkOllamaHealth(): Promise<{ available: boolean; models: string[] }> {
   try {

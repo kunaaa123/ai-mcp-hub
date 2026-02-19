@@ -13,6 +13,7 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   timeline?: ExecutionTimeline;
+  streaming?: boolean;  // true while tokens are being received
 }
 
 export interface ToolCall {
@@ -48,6 +49,7 @@ export function useAgent() {
   const [role, setRole] = useState<Role>('operator');
   const [agentMode, setAgentMode] = useState<AgentMode>('single');
   const socketRef = useRef<Socket | null>(null);
+  const streamingMsgIdRef = useRef<string | null>(null);
 
   const connectSocket = useCallback((sid: string) => {
     if (socketRef.current) socketRef.current.disconnect();
@@ -63,6 +65,17 @@ export function useAgent() {
         }
         return { ...prev, toolCalls: [...prev.toolCalls, toolCall] };
       });
+    });
+
+    // Handle real-time streaming tokens
+    socket.on('agent:token', ({ token }: { token: string }) => {
+      const msgId = streamingMsgIdRef.current;
+      if (!msgId) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId ? { ...m, content: m.content + token, streaming: true } : m
+        )
+      );
     });
 
     socketRef.current = socket;
@@ -91,6 +104,18 @@ export function useAgent() {
     };
     setCurrentTimeline(liveTimeline);
 
+    // Create a placeholder streaming message (visible while tokens arrive)
+    const streamingMsgId = crypto.randomUUID();
+    streamingMsgIdRef.current = streamingMsgId;
+    const streamingMsg: ChatMessage = {
+      id: streamingMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      streaming: true,
+    };
+    setMessages((prev) => [...prev, streamingMsg]);
+
     try {
       const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
@@ -103,40 +128,42 @@ export function useAgent() {
       if (data.success) {
         const { sessionId: newSid, response, timeline } = data.data;
 
-        // Save session
+        // Save session and connect socket (first time)
         if (!sessionId) {
           setSessionId(newSid);
           connectSocket(newSid);
         }
 
-        // Add assistant message
-        const assistantMsg: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: response,
-          timestamp: new Date(),
-          timeline,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
+        // Finalize the streaming message with full timeline
+        streamingMsgIdRef.current = null;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === streamingMsgId
+              ? { ...m, content: response, streaming: false, timeline }
+              : m
+          )
+        );
         setCurrentTimeline(timeline);
         setAllTimelines((prev) => [...prev, timeline]);
       } else {
-        const errMsg: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: `❌ Error: ${data.error}`,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, errMsg]);
+        streamingMsgIdRef.current = null;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === streamingMsgId
+              ? { ...m, content: `❌ Error: ${data.error}`, streaming: false }
+              : m
+          )
+        );
       }
     } catch (err: any) {
-      const errMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `❌ Network error: ${err.message}`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errMsg]);
+      streamingMsgIdRef.current = null;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamingMsgId
+            ? { ...m, content: `❌ Network error: ${err.message}`, streaming: false }
+            : m
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +177,7 @@ export function useAgent() {
     setMessages([]);
     setCurrentTimeline(null);
     setAllTimelines([]);
+    streamingMsgIdRef.current = null;
     socketRef.current?.disconnect();
     socketRef.current = null;
   }, [sessionId]);

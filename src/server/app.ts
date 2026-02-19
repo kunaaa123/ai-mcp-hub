@@ -164,6 +164,9 @@ export function createApp() {
           sessionId: session.sessionId,
           userId,
           role: role as Role,
+          onToken: (token: string) => {
+            emitUpdate('agent:token', { token });
+          },
         });
 
         // Record metrics
