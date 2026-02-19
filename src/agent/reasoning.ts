@@ -38,17 +38,30 @@ REAL-TIME DATA — use web_fetch_json for live prices (no API key needed):
 
 GOLD/METALS (ราคาทอง):
 - URL: https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD
-- Response: array → data[0].spreadProfilePrices[0].bid = gold price USD per troy oz
-- Example extraction: if result is [{spreadProfilePrices:[{bid:2900.5,...},...]}] then gold_usd = 2900.5
+- Returns: { price_usd_per_oz, price_usd_per_gram, bid, ask }
 - 1 troy oz = 31.1035 grams  |  1 บาททอง = 15.244 grams
 
+STOCK PRICES (ราคาหุ้น) — Yahoo Finance, ไม่ต้อง API key:
+- Google  (GOOGL): https://query1.finance.yahoo.com/v8/finance/chart/GOOGL
+- Apple   (AAPL) : https://query1.finance.yahoo.com/v8/finance/chart/AAPL
+- Tesla   (TSLA) : https://query1.finance.yahoo.com/v8/finance/chart/TSLA
+- NVIDIA  (NVDA) : https://query1.finance.yahoo.com/v8/finance/chart/NVDA
+- Meta    (META) : https://query1.finance.yahoo.com/v8/finance/chart/META
+- Any symbol     : https://query1.finance.yahoo.com/v8/finance/chart/SYMBOL
+- Returns: { symbol, price, price_usd, currency, exchange }
+
 CRYPTO:
-- BTC: https://api.coinbase.com/v2/prices/BTC-USD/spot → data.data.amount
-- ETH: https://api.coinbase.com/v2/prices/ETH-USD/spot → data.data.amount
+- BTC: https://api.coinbase.com/v2/prices/BTC-USD/spot → { price, price_usd }
+- ETH: https://api.coinbase.com/v2/prices/ETH-USD/spot → { price, price_usd }
 
 EXCHANGE RATE (อัตราแลกเปลี่ยน USD→THB):
 - URL: https://api.frankfurter.app/latest?from=USD&to=THB
-- Response: data.rates.THB = baht per 1 USD
+- Returns: { THB: rate }
+
+DATABASE vs TABLE — important distinction:
+- "สร้างฐานข้อมูล XYZ" or "สร้าง database XYZ" = สร้าง TABLE ชื่อ XYZ ใน database mcp_hub (ใช้ db_migrate)
+- ระบบนี้ใช้ database เดียวคือ mcp_hub ตลอด — ไม่สามารถสร้าง database ใหม่ได้
+- ตัวอย่าง: CREATE TABLE IF NOT EXISTS AG (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, symbol VARCHAR(10), price DECIMAL(10,2), recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP)
 
 SQL RULES — critical, never break these:
 - BEFORE doing INSERT/UPDATE on any table: call db_schema first to check the REAL column names

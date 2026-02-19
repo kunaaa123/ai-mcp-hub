@@ -192,5 +192,25 @@ export async function fetchJson(url: string, params?: Record<string, string>): P
     }
   }
 
+  // Yahoo Finance stock/ETF price
+  if (url.includes('finance.yahoo.com')) {
+    try {
+      const result = data as { chart: { result: Array<{ meta: { symbol: string; regularMarketPrice: number; currency: string; exchangeName: string; longName?: string } }> } };
+      const meta = result?.chart?.result?.[0]?.meta;
+      if (meta?.regularMarketPrice !== undefined) {
+        return {
+          source: 'Yahoo Finance',
+          symbol: meta.symbol,
+          name: meta.longName ?? meta.symbol,
+          price: meta.regularMarketPrice,
+          price_usd: meta.currency === 'USD' ? meta.regularMarketPrice : null,
+          currency: meta.currency,
+          exchange: meta.exchangeName,
+          note: `Use price=${meta.regularMarketPrice} for INSERT`,
+        };
+      }
+    } catch { /* fall through */ }
+  }
+
   return data;
 }
