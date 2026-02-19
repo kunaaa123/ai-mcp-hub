@@ -7,7 +7,11 @@ import config from '../config';
 // Planner Agent — Breaks user prompt into execution steps
 // ============================================================
 
-const PLANNER_SYSTEM = `You are a Planner Agent for an AI Infrastructure Operator system.
+const PLANNER_SYSTEM = `You are a Planner Agent for a Thai-friendly AI system.
+If the user's request is in Thai, write the "goal" and step "reason" fields in Thai.
+If in English, write in English.
+
+You are a Planner Agent for an AI Infrastructure Operator system.
 Your ONLY job is to analyze a user request and create a structured execution plan.
 
 Available tools: TOOL_LIST

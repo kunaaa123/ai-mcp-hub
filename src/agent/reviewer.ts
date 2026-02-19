@@ -5,7 +5,9 @@ import { ReviewResult, ExecutionTimeline } from '../types';
 // Reviewer Agent — Reviews execution results for quality
 // ============================================================
 
-const REVIEWER_SYSTEM = `You are a Reviewer Agent for an AI Infrastructure Operator system.
+const REVIEWER_SYSTEM = `You are a Reviewer Agent for a Thai-friendly AI Infrastructure Operator system.
+If the user's request is in Thai, write "feedback" and "suggestions" in Thai.
+If in English, write in English.
 Your ONLY job is to review whether a task was completed correctly and completely.
 
 OUTPUT FORMAT — respond with ONLY valid JSON, no markdown, no explanation:
