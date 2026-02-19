@@ -38,6 +38,9 @@ async function main() {
     console.log(`  POST http://localhost:${config.port}/api/chat`);
     console.log(`  GET  http://localhost:${config.port}/api/sessions`);
     console.log(`  POST http://localhost:${config.port}/api/sessions`);
+    console.log(`  GET  http://localhost:${config.port}/api/mcp/servers`);
+    console.log(`  POST http://localhost:${config.port}/api/mcp/servers`);
+    console.log(`  GET  http://localhost:${config.port}/api/mcp/tools`);
     console.log('');
     console.log('[Web UI] http://localhost:3001');
     console.log('');
