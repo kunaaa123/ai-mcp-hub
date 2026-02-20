@@ -4,7 +4,7 @@
   "description": "AI Multi-Connector Hub — MCP-based AI System Operator powered by Ollama",
   "main": "dist/server/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server/index.ts",
+    "dev": "npx kill-port 4000 --silent & ts-node-dev --respawn --transpile-only --exit-child src/server/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server/index.js",
     "web:dev": "cd web && npm run dev",

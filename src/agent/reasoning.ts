@@ -34,6 +34,12 @@ REAL-TIME DATA (use web_fetch_json — no API key needed):
 - USD→THB rate    : https://api.frankfurter.app/latest?from=USD&to=THB → {THB}
 Note: 1 troy oz = 31.1035g | 1 บาททอง = 15.244g
 
+WEB SCRAPING: When user asks about a website or wants to read webpage content:
+- Use web_scrape to fetch and read the page HTML (returns title, text, links)
+- Use web_search first to find the URL if you don't have it
+- Example: "อยากรู้เกี่ยวกับ anime108.com" → call web_scrape with url="https://anime108.com"
+- Do NOT say "ไม่พบข้อมูล" without trying web_scrape first
+
 DATABASE: This system uses only the mcp_hub database. "สร้างฐานข้อมูล X" = CREATE TABLE X in mcp_hub.
 Always include: id INT NOT NULL AUTO_INCREMENT PRIMARY KEY in new tables.
 
@@ -160,6 +166,34 @@ export class ReasoningAgent {
       }
 
       const assistantMessage = response.message;
+
+      // ─── Detect tool call embedded in content (llama3.1 fallback) ───
+      // Some Ollama versions output tool calls as raw JSON text in content
+      // e.g. {"name":"web_scrape","parameters":{"url":"..."}} instead of tool_calls field
+      if ((!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0)
+          && assistantMessage.content) {
+        const contentStr = assistantMessage.content.trim();
+        // Try to extract a JSON tool call from the content
+        const toolCallMatch = contentStr.match(/\{[\s\S]*"name"\s*:\s*"([^"]+)"[\s\S]*\}/);
+        if (toolCallMatch) {
+          try {
+            const parsed = JSON.parse(toolCallMatch[0]);
+            const toolName = parsed.name ?? parsed.function?.name;
+            const toolArgs = parsed.parameters ?? parsed.arguments ?? parsed.args ?? {};
+            if (toolName) {
+              console.log(`[Agent] Detected text-embedded tool call: ${toolName}`, toolArgs);
+              // Inject as a proper tool_call and continue loop
+              assistantMessage.tool_calls = [{
+                function: { name: toolName, arguments: toolArgs },
+              }];
+              assistantMessage.content = ''; // clear raw JSON from content
+              // Don't break — fall through to tool execution below
+            }
+          } catch {
+            // Not valid JSON — treat as final response
+          }
+        }
+      }
 
       // If no tool calls, this is the final response
       if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {

@@ -62,7 +62,13 @@ export function ToolsSidebar({ role }: ToolsSidebarProps) {
       .finally(() => setLoading(false));
   }, [role]);
 
+  // Auto-retry every 5s when backend is offline
   useEffect(() => { fetchTools(); }, [fetchTools]);
+  useEffect(() => {
+    if (!error) return;
+    const id = setInterval(fetchTools, 5000);
+    return () => clearInterval(id);
+  }, [error, fetchTools]);
 
   if (loading) {
     return (
@@ -75,13 +81,14 @@ export function ToolsSidebar({ role }: ToolsSidebarProps) {
   if (error) {
     return (
       <div className="p-4 space-y-2">
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Backend offline</p>
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>❌ Backend offline</p>
+        <p className="text-xs" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>กำลัง retry อัตโนมัติทุก 5 วินาที...</p>
         <button
           onClick={fetchTools}
           className="flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-white/5 transition-colors"
           style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
         >
-          <RefreshCw size={11} /> Retry
+          <RefreshCw size={11} /> Retry ตอนนี้
         </button>
       </div>
     );

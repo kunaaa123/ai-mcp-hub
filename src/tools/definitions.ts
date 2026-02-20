@@ -305,6 +305,19 @@ export const toolDefinitions: MCPTool[] = [
     safeForProduction: true,
   },
   {
+    name: 'web_scrape',
+    description: 'Scrape a webpage and return its title, text content, and links. Use this when the user asks about a specific website URL, wants to read webpage content, or wants to know what a site is about.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Full URL of the page to scrape (must start with http:// or https://)' },
+      },
+      required: ['url'],
+    },
+    permissionRequired: ['admin', 'operator', 'dev', 'readonly'],
+    safeForProduction: true,
+  },
+  {
     name: 'web_fetch_json',
     description: 'Fetch raw JSON data from any public HTTP/HTTPS API endpoint. Use this for real-time data. Working free APIs: GOLD price=https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD (returns array, extract [0].spreadProfilePrices[0].bid for USD/oz), BTC=https://api.coinbase.com/v2/prices/BTC-USD/spot (extract data.amount), USD to THB rate=https://api.frankfurter.app/latest?from=USD&to=THB (extract rates.THB).',
     inputSchema: {

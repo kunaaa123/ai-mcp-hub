@@ -20,11 +20,17 @@ async function main() {
     console.warn('[Ollama] Make sure Ollama is running: ollama serve');
   }
 
-  // Connect external MCP servers
-  await mcpManager.connectAll();
-
-  // Start server
+  // Start server FIRST — don't block on MCP connections
   const { httpServer } = createApp();
+
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[Server] ❌ Port ${config.port} is already in use.`);
+      console.error(`[Server] Run: npx kill-port ${config.port}  then restart.`);
+      process.exit(1);
+    }
+    throw err;
+  });
 
   httpServer.listen(config.port, () => {
     console.log('');
@@ -44,6 +50,11 @@ async function main() {
     console.log('');
     console.log('[Web UI] http://localhost:3001');
     console.log('');
+
+    // Connect MCP servers in background — don't block HTTP readiness
+    mcpManager.connectAll().catch((err) => {
+      console.error('[MCP] Fatal error during connectAll:', err);
+    });
   });
 }
 

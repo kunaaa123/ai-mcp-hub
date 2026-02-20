@@ -4,7 +4,7 @@ import { toolDefinitions } from './definitions';
 import { callApi } from '../connectors/api/rest';
 import { scaffoldProject } from '../connectors/filesystem/fs';
 import { cloneRepo, commitChanges, createBranch, getDiff, analyzeBreakingChanges, listBranches, pushBranch, getLog, getStatus } from '../connectors/git/git';
-import { webSearch, fetchJson } from '../connectors/web/scraper';
+import { webSearch, webScrape, fetchJson } from '../connectors/web/scraper';
 import { mcpManager } from '../mcp/manager';
 
 // ============================================================
@@ -203,8 +203,7 @@ export class ToolRegistry {
       }
 
       case 'web_scrape': {
-        // Route through external MCP fetch server
-        return mcpManager.executeTool('mcp__fetch__fetch', { url: args['url'] as string });
+        return webScrape(args['url'] as string, args['selector'] as string | undefined);
       }
 
       case 'web_fetch_json': {
