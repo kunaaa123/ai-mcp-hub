@@ -50,6 +50,7 @@ SQL RULES (critical):
 
 ENVIRONMENT:
 - CWD / git path: ${cwd}
+- Git repo absolute path (Windows): C:\\Users\\Gnis_ha\\Desktop\\AI\\ai-mcp-hub
 - FS allowed path: ${fsAllowed}
 - Database: ${config.database.host}:${config.database.port}/${config.database.database}
 - Redis: ${config.redis.host}:${config.redis.port}

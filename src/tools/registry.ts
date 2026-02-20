@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
 import { ToolCall, ToolName, Role } from '../types';
 import { toolDefinitions } from './definitions';
 import { callApi } from '../connectors/api/rest';
@@ -58,6 +60,17 @@ export class ToolRegistry {
   }
 
   private async dispatch(toolName: ToolName, args: Record<string, unknown>): Promise<unknown> {
+    // Helper: resolve git repo path — fallback to CWD if AI gives wrong/missing path
+    const resolveRepoPath = (provided: unknown): string => {
+      if (provided && typeof provided === 'string') {
+        const p = path.resolve(provided);
+        if (fs.existsSync(path.join(p, '.git'))) return p;
+        if (fs.existsSync(p)) return p;
+      }
+      // Fallback to project root (where server runs)
+      return process.cwd();
+    };
+
     switch (toolName) {
       // ─── Database (via external MCP mysql server) ─────────
       case 'db_query': {
@@ -122,10 +135,10 @@ export class ToolRegistry {
       }
       case 'git_commit': {
         const files = args['files'] ? JSON.parse(args['files'] as string) : undefined;
-        return commitChanges(args['repoPath'] as string, args['message'] as string, files);
+        return commitChanges(resolveRepoPath(args['repoPath']), args['message'] as string, files);
       }
       case 'git_diff': {
-        const repoPath = args['repoPath'] as string;
+        const repoPath = resolveRepoPath(args['repoPath']);
         const from = (args['from'] as string) || 'HEAD~1';
         const to = (args['to'] as string) || 'HEAD';
         const summary = await getDiff(repoPath, from, to);
@@ -137,7 +150,7 @@ export class ToolRegistry {
         return summary;
       }
       case 'git_branch': {
-        const repoPath = args['repoPath'] as string;
+        const repoPath = resolveRepoPath(args['repoPath']);
         if (args['action'] === 'create') {
           return createBranch(repoPath, args['branchName'] as string);
         }
@@ -145,17 +158,17 @@ export class ToolRegistry {
       }
       case 'git_pr': {
         return pushBranch(
-          args['repoPath'] as string,
+          resolveRepoPath(args['repoPath']),
           (args['remote'] as string) || 'origin',
           args['branch'] as string | undefined
         );
       }
       case 'git_log': {
         const count = args['count'] ? parseInt(args['count'] as string) : 10;
-        return getLog(args['repoPath'] as string, count);
+        return getLog(resolveRepoPath(args['repoPath']), count);
       }
       case 'git_status': {
-        return getStatus(args['repoPath'] as string);
+        return getStatus(resolveRepoPath(args['repoPath']));
       }
 
       // ─── Redis (via external MCP redis server) ───────────
