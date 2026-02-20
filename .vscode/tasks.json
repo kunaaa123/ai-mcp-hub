@@ -2,10 +2,28 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Start Backend",
+			"label": "🚀 Backend (port 4000)",
 			"type": "shell",
 			"command": "npm run dev",
+			"options": { "cwd": "${workspaceFolder}" },
 			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "🌐 Frontend (port 3001)",
+			"type": "shell",
+			"command": "npm run dev",
+			"options": { "cwd": "${workspaceFolder}/web" },
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "▶️ Run Both (Backend + Frontend)",
+			"dependsOn": ["🚀 Backend (port 4000)", "🌐 Frontend (port 3001)"],
+			"dependsOrder": "parallel",
+			"group": { "kind": "build", "isDefault": true },
 			"problemMatcher": []
 		}
 	]

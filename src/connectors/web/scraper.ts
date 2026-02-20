@@ -2,7 +2,9 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 // ============================================================
-// Web Connector — Search + Scrape
+// Web Connector — Search + Fetch JSON
+// (web_scrape is now handled by external MCP fetch server
+//  via mcp-servers.json)
 // ============================================================
 
 const HEADERS = {
@@ -16,14 +18,6 @@ export interface SearchResult {
   title: string;
   url: string;
   snippet: string;
-}
-
-export interface ScrapeResult {
-  url: string;
-  title: string;
-  text: string;
-  wordCount: number;
-  links: Array<{ text: string; href: string }>;
 }
 
 // ─── Web Search (DuckDuckGo — no API key needed) ─────────────
@@ -81,57 +75,6 @@ export async function webSearch(
   }
 
   return results;
-}
-
-// ─── Web Scrape (fetch URL → clean text) ─────────────────────
-export async function webScrape(
-  url: string,
-  selector?: string
-): Promise<ScrapeResult> {
-  const { data } = await axios.get<string>(url, {
-    headers: { ...HEADERS, Accept: 'text/html' },
-    timeout: 15000,
-    maxContentLength: 5 * 1024 * 1024, // 5MB max
-  });
-
-  const $ = cheerio.load(data);
-
-  // Remove noise
-  $('script, style, nav, footer, header, iframe, noscript, [role="banner"]').remove();
-
-  const title = $('title').text().trim() || $('h1').first().text().trim();
-
-  // Extract text from specific selector or main content
-  const target = selector
-    ? $(selector)
-    : $('article, main, .content, .post, body');
-
-  const text = target
-    .text()
-    .replace(/\s+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .slice(0, 8000); // cap at 8000 chars
-
-  // Extract links
-  const links: Array<{ text: string; href: string }> = [];
-  $('a[href]')
-    .slice(0, 20)
-    .each((_, el) => {
-      const href = $(el).attr('href') ?? '';
-      const text = $(el).text().trim();
-      if (href.startsWith('http') && text) {
-        links.push({ text, href });
-      }
-    });
-
-  return {
-    url,
-    title,
-    text,
-    wordCount: text.split(/\s+/).length,
-    links,
-  };
 }
 
 // ─── Fetch JSON from URL ─────────────────────────────────────

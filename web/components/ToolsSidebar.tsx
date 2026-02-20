@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Database, Globe, FolderOpen, GitBranch, Layers, Lock, ShieldCheck } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Database, Globe, FolderOpen, GitBranch, Layers, Lock, ShieldCheck, Search, RefreshCw } from 'lucide-react';
 import type { Role } from '../hooks/useAgent';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -19,6 +19,8 @@ const CATEGORY_MAP: Record<string, { label: string; icon: React.ReactNode; color
   fs:    { label: 'File System', icon: <FolderOpen size={14} />, color: 'text-yellow-400' },
   git:   { label: 'Git', icon: <GitBranch size={14} />, color: 'text-purple-400' },
   redis: { label: 'Redis', icon: <Layers size={14} />, color: 'text-red-400' },
+  web:   { label: 'Web', icon: <Search size={14} />, color: 'text-cyan-400' },
+  other: { label: 'Other', icon: <Globe size={14} />, color: 'text-gray-400' },
 };
 
 function getCategory(toolName: string): string {
@@ -27,6 +29,7 @@ function getCategory(toolName: string): string {
   if (toolName.startsWith('fs_')) return 'fs';
   if (toolName.startsWith('git_')) return 'git';
   if (toolName.startsWith('redis_')) return 'redis';
+  if (toolName.startsWith('web_')) return 'web';
   return 'other';
 }
 
@@ -38,28 +41,48 @@ export function ToolsSidebar({ role }: ToolsSidebarProps) {
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCat, setExpandedCat] = useState<string | null>('db');
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    const roleTokens: Record<Role, string> = {
-      admin: 'admin-key-secret',
-      operator: 'operator-key-secret',
-      dev: 'dev-key-secret',
-      readonly: 'readonly-key-secret',
-    };
+  const roleTokens: Record<Role, string> = {
+    admin: 'admin-key-secret',
+    operator: 'operator-key-secret',
+    dev: 'dev-key-secret',
+    readonly: 'readonly-key-secret',
+  };
 
+  const fetchTools = useCallback(() => {
+    setLoading(true);
+    setError(false);
     fetch(`${API_URL}/api/tools`, {
       headers: { Authorization: `Bearer ${roleTokens[role]}` },
     })
       .then((r) => r.json())
-      .then((d) => setTools(d.data?.tools ?? []))
-      .catch(() => setTools([]))
+      .then((d) => { setTools(d.data?.tools ?? []); setError(false); })
+      .catch(() => { setTools([]); setError(true); })
       .finally(() => setLoading(false));
   }, [role]);
+
+  useEffect(() => { fetchTools(); }, [fetchTools]);
 
   if (loading) {
     return (
       <div className="p-4 text-xs" style={{ color: 'var(--text-muted)' }}>
         Loading tools...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 space-y-2">
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Backend offline</p>
+        <button
+          onClick={fetchTools}
+          className="flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-white/5 transition-colors"
+          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+        >
+          <RefreshCw size={11} /> Retry
+        </button>
       </div>
     );
   }
@@ -76,10 +99,16 @@ export function ToolsSidebar({ role }: ToolsSidebarProps) {
     <div className="p-3 space-y-2">
       <div className="px-1 pb-1 flex items-center justify-between">
         <p className="text-xs font-medium text-white">{tools.length} tools available</p>
-        <span className="text-xs px-2 py-0.5 rounded-full border"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-          Role: <span className="text-purple-400">{role}</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchTools} title="Refresh tools"
+            className="opacity-50 hover:opacity-100 transition-opacity">
+            <RefreshCw size={11} style={{ color: 'var(--text-muted)' }} />
+          </button>
+          <span className="text-xs px-2 py-0.5 rounded-full border"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+            Role: <span className="text-purple-400">{role}</span>
+          </span>
+        </div>
       </div>
 
       {Object.entries(grouped).map(([cat, catTools]) => {

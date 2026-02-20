@@ -46,10 +46,12 @@ export class MCPServerClient {
   }
 
   async connect(): Promise<void> {
+    // On Windows, commands like 'npx' are batch files (.cmd) and require shell:true
+    const isWindows = process.platform === 'win32';
     this.proc = spawn(this.config.command, this.config.args ?? [], {
       env: { ...process.env as Record<string, string>, ...(this.config.env ?? {}) },
       stdio: ['pipe', 'pipe', 'pipe'],
-      shell: false,
+      shell: isWindows,
     });
 
     // Read line-delimited JSON from stdout
@@ -131,7 +133,7 @@ export class MCPServerClient {
           this.pending.delete(id);
           reject(new Error(`Request timeout: ${method}`));
         }
-      }, 30_000);
+      }, 90_000); // 90s — generous for first-time npx download
     });
   }
 

@@ -1,12 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import { ToolCall, ToolName, Role } from '../types';
 import { toolDefinitions } from './definitions';
-import { runQuery, getSchema, executeMigration } from '../connectors/database/mysql';
 import { callApi } from '../connectors/api/rest';
-import { readFile, writeFile, listDir, searchFiles, scaffoldProject } from '../connectors/filesystem/fs';
-import { cloneRepo, commitChanges, createBranch, getDiff, getDiffContent, analyzeBreakingChanges, listBranches, pushBranch, getLog, getStatus } from '../connectors/git/git';
-import { redisGet, redisSet, queuePush, queuePop, queueLength, queuePeek, getQueueStatus, publishMessage } from '../connectors/redis/redis';
-import { webSearch, webScrape, fetchJson } from '../connectors/web/scraper';
+import { scaffoldProject } from '../connectors/filesystem/fs';
+import { cloneRepo, commitChanges, createBranch, getDiff, analyzeBreakingChanges, listBranches, pushBranch, getLog, getStatus } from '../connectors/git/git';
+import { webSearch, fetchJson } from '../connectors/web/scraper';
+import { mcpManager } from '../mcp/manager';
 
 // ============================================================
 // Tool Registry — executes MCP tools
@@ -60,44 +59,22 @@ export class ToolRegistry {
 
   private async dispatch(toolName: ToolName, args: Record<string, unknown>): Promise<unknown> {
     switch (toolName) {
-      // ─── Database ────────────────────────────────────────
+      // ─── Database (via external MCP mysql server) ─────────
       case 'db_query': {
         const sql = args['sql'] as string;
-
-        // Detect bad SQL: template placeholders like {gold} or {value}
+        // Guard against template placeholders like {gold}
         if (/\{[a-zA-Z_]+\}/.test(sql)) {
           throw new Error(
-            'SQL contains template placeholder like {gold} or {value}. ' +
-            'You must put the REAL numeric/string value directly in the SQL or use ? with params array. ' +
-            'Example correct SQL: INSERT INTO gold (price) VALUES (2650.50) ' +
-            'or parameterized: INSERT INTO gold (price) VALUES (?) with params: [2650.50]'
+            'SQL contains placeholder like {gold}. Put the REAL value directly, e.g. VALUES (2650.50)'
           );
         }
-
-        // Normalize params — accept: string JSON, array, or array of {value:x} objects
-        let rawParams = args['params'];
-        let params: unknown[] = [];
-        if (rawParams) {
-          if (typeof rawParams === 'string') {
-            rawParams = JSON.parse(rawParams);
-          }
-          if (Array.isArray(rawParams)) {
-            // Unwrap {value: x} objects if AI mistakenly wraps them
-            params = rawParams.map((p: unknown) =>
-              p !== null && typeof p === 'object' && 'value' in (p as object)
-                ? (p as { value: unknown }).value
-                : p
-            );
-          }
-        }
-
-        return runQuery(sql, params);
+        return mcpManager.executeTool('mcp__mysql__query', { sql, params: args['params'] });
       }
       case 'db_schema': {
-        return getSchema(args['database'] as string | undefined);
+        return mcpManager.executeTool('mcp__mysql__list_tables', {});
       }
       case 'db_migrate': {
-        return executeMigration(args['migrationSql'] as string);
+        return mcpManager.executeTool('mcp__mysql__query', { sql: args['migrationSql'] });
       }
 
       // ─── REST API ────────────────────────────────────────
@@ -118,20 +95,18 @@ export class ToolRegistry {
         });
       }
 
-      // ─── File System ─────────────────────────────────────
+      // ─── File System (via external MCP filesystem server) ──
       case 'fs_read': {
-        const content = await readFile(args['path'] as string);
-        return { path: args['path'], content };
+        return mcpManager.executeTool('mcp__filesystem__read_file', { path: args['path'] as string });
       }
       case 'fs_write': {
-        return writeFile(args['path'] as string, args['content'] as string);
+        return mcpManager.executeTool('mcp__filesystem__write_file', {
+          path: args['path'] as string,
+          content: args['content'] as string,
+        });
       }
       case 'fs_list': {
-        if (args['pattern']) {
-          const files = await searchFiles(args['pattern'] as string, args['path'] as string);
-          return { files, total: files.length };
-        }
-        return listDir(args['path'] as string);
+        return mcpManager.executeTool('mcp__filesystem__list_directory', { path: args['path'] as string });
       }
       case 'fs_scaffold': {
         return scaffoldProject({
@@ -183,29 +158,40 @@ export class ToolRegistry {
         return getStatus(args['repoPath'] as string);
       }
 
-      // ─── Redis ───────────────────────────────────────────
+      // ─── Redis (via external MCP redis server) ───────────
       case 'redis_get': {
-        const value = await redisGet(args['key'] as string);
-        return { key: args['key'], value };
+        return mcpManager.executeTool('mcp__redis__get', { key: args['key'] });
       }
       case 'redis_set': {
-        const ttl = args['ttl'] ? parseInt(args['ttl'] as string) : undefined;
-        const result = await redisSet(args['key'] as string, args['value'] as string, ttl);
-        return { key: args['key'], result };
+        return mcpManager.executeTool('mcp__redis__set', {
+          key: args['key'],
+          value: args['value'],
+          ...(args['ttl'] ? { expireSeconds: parseInt(args['ttl'] as string) } : {}),
+        });
       }
       case 'redis_queue': {
         const queueName = args['queueName'] as string;
         switch (args['action']) {
-          case 'push': return queuePush(queueName, JSON.parse(args['job'] as string));
-          case 'pop': return queuePop(queueName);
-          case 'status': return getQueueStatus(queueName);
-          case 'peek': return queuePeek(queueName, 10);
-          default: throw new Error(`Unknown queue action: ${args['action']}`);
+          case 'push':
+            return mcpManager.executeTool('mcp__redis__rpush', {
+              key: queueName,
+              value: args['job'],
+            });
+          case 'pop':
+            return mcpManager.executeTool('mcp__redis__lpop', { key: queueName });
+          case 'status':
+            return mcpManager.executeTool('mcp__redis__llen', { key: queueName });
+          case 'peek':
+            return mcpManager.executeTool('mcp__redis__lrange', { key: queueName, start: 0, stop: 9 });
+          default:
+            throw new Error(`Unknown queue action: ${args['action']}`);
         }
       }
       case 'redis_pubsub': {
-        const count = await publishMessage(args['channel'] as string, JSON.parse(args['message'] as string));
-        return { channel: args['channel'], receiverCount: count };
+        return mcpManager.executeTool('mcp__redis__publish', {
+          channel: args['channel'],
+          message: args['message'],
+        });
       }
 
       case 'web_search': {
@@ -217,11 +203,8 @@ export class ToolRegistry {
       }
 
       case 'web_scrape': {
-        const result = await webScrape(
-          args['url'] as string,
-          args['selector'] as string | undefined
-        );
-        return result;
+        // Route through external MCP fetch server
+        return mcpManager.executeTool('mcp__fetch__fetch', { url: args['url'] as string });
       }
 
       case 'web_fetch_json': {
